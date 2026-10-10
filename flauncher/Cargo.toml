@@ -1,0 +1,16 @@
+[package]
+name = "flauncher"
+version = "0.1.0"
+authors = ["Tymur Nikolaiev <tymur.nikolaiev@netwrix.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dioxus = { version = "0.7.1", features = [] }
+flauncher_core = { path = "../flauncher_core" }
+
+[features]
+default = ["desktop"]
+# The feature that are only required for the desktop = ["dioxus/desktop"] build target should be optional and only enabled in the desktop = ["dioxus/desktop"] feature
+desktop = ["dioxus/desktop"]

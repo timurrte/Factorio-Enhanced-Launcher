@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "flauncher_core",
+    "flauncher"
+]
+resolver = "2"
