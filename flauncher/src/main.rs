@@ -1,6 +1,4 @@
 use dioxus::prelude::*;
-use std::fs;
-use std::path::PathBuf;
 use std::process::Command;
 use flauncher_core::{get_profiles, get_profiles_dir, create_profile_dir, launch_game};
 
@@ -21,7 +19,7 @@ fn App() -> Element {
     rsx! {
         div { style: "padding: 30px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: auto;",
             h1 { style: "color: #e67e22; margin-bottom: 5px;", "Factorio Profile Manager" }
-            p { style: "color: #7f8c8d; font-size: 14px; margin-top: 0;", "Manage isolated mod and save profiles for macOS" }
+            p { style: "color: #7f8c8d; font-size: 14px; margin-top: 0;", "Manage isolated mod and save profiles for Factorio" }
 
             div { style: "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e9ecef;",
                 h3 { style: "margin-top: 0; font-size: 16px;", "Create New Profile" }
@@ -85,7 +83,7 @@ fn App() -> Element {
                                                 let _ = Command::new("open").arg(path).spawn();
                                             },
                                             style: "background: #95a5a6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;",
-                                            "Open Folder"
+                                            "Open Folder 📁"
                                         }
                                     }
                                 }
