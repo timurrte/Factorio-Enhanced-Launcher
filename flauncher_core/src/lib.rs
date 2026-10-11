@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 #[derive(Debug, Clone)]
@@ -50,7 +50,7 @@ pub fn find_factorio_installation<P: AsRef<Path>>(install_root: P) -> Result<Fac
 
     #[cfg(target_os = "windows")]
     let (bin_rel, data_rel) = (
-        PathBuf::from("bin/x64/factorio.exe"),
+        PathBuf::from("bin\\x64\\factorio.exe"),
         PathBuf::from("data"),
     );
 
@@ -147,7 +147,7 @@ pub fn get_profiles() -> Vec<String> {
     }
 }
 
-pub fn create_profile_dir(name: &str) -> Result<(), String> {
+pub fn create_profile_dir(name: &str, config: &FactorioConfig) -> Result<(), String> {
     if name.trim().is_empty() {
         return Err("Profile name cannot be empty.".into());
     }
@@ -184,7 +184,7 @@ locale=auto
 [multiplayer-lobby]
 [graphics]
 "#,
-        FACTORIO_DATA,
+        config.data_path.to_string_lossy(),
         profile_path.to_string_lossy()
     );
 
@@ -193,19 +193,26 @@ locale=auto
     Ok(())
 }
 
-pub fn launch_game(name: &str) -> Result<(), String> {
+pub fn launch_game(name: &str, config: &FactorioConfig) -> Result<(), String> {
     let profiles_dir = get_profiles_dir();
     let config_ini_path = profiles_dir.join(name).join("config/config.ini");
 
     if !config_ini_path.exists() {
-        create_profile_dir(name)?;
+        create_profile_dir(name, config)?;
     }
 
-    Command::new(FACTORIO_BIN)
+    Command::new(&config.bin_path)
         .arg("--config")
         .arg(&config_ini_path)
         .spawn()
-        .map_err(|e| format!("Failed to launch Factorio: {}", e))?;
+        .map_err(|e| {
+            format!(
+                "Failed to launch Factorio at '{}': {} (os error {})",
+                config.bin_path.display(),
+                e,
+                e.raw_os_error().unwrap_or(0)
+            )
+        })?;
 
     Ok(())
 }

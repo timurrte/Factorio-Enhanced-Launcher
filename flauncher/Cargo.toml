@@ -9,6 +9,7 @@ edition = "2021"
 [dependencies]
 dioxus = { version = "0.7.1", features = [] }
 flauncher_core = { path = "../flauncher_core" }
+rfd = "0.17.2"
 
 [features]
 default = ["desktop"]

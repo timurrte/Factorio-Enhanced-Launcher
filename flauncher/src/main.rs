@@ -1,6 +1,9 @@
 use dioxus::prelude::*;
 use std::process::Command;
-use flauncher_core::{get_profiles, get_profiles_dir, create_profile_dir, launch_game};
+use flauncher_core::{
+    load_config, save_config, find_factorio_installation, 
+    get_profiles, get_profiles_dir, create_profile_dir, launch_game
+};
 
 fn main() {
     launch(App);
@@ -8,6 +11,10 @@ fn main() {
 
 #[component]
 fn App() -> Element {
+    let mut config = use_signal(|| load_config());
+    let mut install_path_input = use_signal(|| String::new());
+    let mut setup_error = use_signal(|| String::new());
+
     let mut new_profile_name = use_signal(|| String::new());
     let mut profiles = use_signal(|| get_profiles());
     let mut status_message = use_signal(|| String::new());
@@ -15,6 +22,51 @@ fn App() -> Element {
     let mut refresh_profiles = move || {
         profiles.set(get_profiles());
     };
+
+    if config().is_none() {
+
+        return rsx! {
+            div { style: "padding: 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: auto; text-align: center;",
+                h2 { style: "color: #e67e22; margin-bottom: 5px;", "Welcome to Factorio Profile Manager" }
+                p { style: "color: #7f8c8d; font-size: 14px; margin-bottom: 25px;", 
+                    "Please locate your Factorio installation folder using the button below." 
+                }
+
+                button {
+                    onclick: move |_| {
+                        // Open OS-native folder picker dialog
+                        if let Some(folder_path) = rfd::FileDialog::new().pick_folder() {
+                            match find_factorio_installation(&folder_path) {
+                                Ok(cfg) => {
+                                    if let Err(e) = save_config(&cfg) {
+                                        setup_error.set(format!("Failed to save config: {}", e));
+                                    } else {
+                                        config.set(Some(cfg));
+                                    }
+                                }
+                                Err(e) => {
+                                    setup_error.set(format!(
+                                        "Invalid folder ({}). Make sure you select the root Factorio folder!",
+                                        e
+                                    ))
+                                }
+                            }
+                        }
+                    },
+                    style: "background: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px;",
+                    "Browse for Factorio Folder 📂"
+                }
+
+                if !setup_error().is_empty() {
+                    div { style: "padding: 12px; background: #fde8e8; color: #c0392b; border-radius: 6px; margin-top: 20px; font-size: 14px; text-align: left;",
+                        "{setup_error}"
+                    }
+                }
+            }
+        };
+    }
+
+    let cfg = config().unwrap();
 
     rsx! {
         div { style: "padding: 30px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: auto;",
@@ -33,7 +85,8 @@ fn App() -> Element {
                     button {
                         onclick: move |_| {
                             let name = new_profile_name();
-                            match create_profile_dir(&name) {
+                            // Pass the active config down to core
+                            match create_profile_dir(&name, &cfg) {
                                 Ok(_) => {
                                     status_message.set(format!("Created profile '{}'", name));
                                     new_profile_name.set(String::new());
@@ -66,10 +119,12 @@ fn App() -> Element {
                                 {
                                     let p_launch = profile.clone();
                                     let p_folder = profile.clone();
+                                    let active_cfg = cfg.clone();
                                     rsx! {
                                         button {
                                             onclick: move |_| {
-                                                match launch_game(&p_launch) {
+                                                // Pass config to launch_game
+                                                match launch_game(&p_launch, &active_cfg) {
                                                     Ok(_) => status_message.set(format!("Launched Factorio with profile '{}'", p_launch)),
                                                     Err(e) => status_message.set(e),
                                                 }
@@ -80,7 +135,10 @@ fn App() -> Element {
                                         button {
                                             onclick: move |_| {
                                                 let path = get_profiles_dir().join(&p_folder);
-                                                let _ = Command::new("open").arg(path).spawn();
+                                                #[cfg(target_os = "windows")]
+                                                    let _ = Command::new("explorer.exe").arg(path).spawn();
+                                                #[cfg(not(target_os = "windows"))]
+                                                    let _ = Command::new("open").arg(path).spawn();
                                             },
                                             style: "background: #95a5a6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;",
                                             "Open Folder 📁"
