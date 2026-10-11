@@ -6,7 +6,14 @@ use flauncher_core::{
 use std::process::Command;
 
 fn main() {
-    launch(App);
+    LaunchBuilder::new()
+        .with_cfg(
+            dioxus::desktop::Config::new().with_window(
+                dioxus::desktop::WindowBuilder::new()
+                    .with_title("Factorio Enhanced Launcher")
+            )
+        )
+        .launch(App);
 }
 
 #[component]
