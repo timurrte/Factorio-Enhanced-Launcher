@@ -56,8 +56,8 @@ pub fn create_profile_dir(name: &str, config: &FactorioConfig) -> Result<(), Str
 ; This is a generated configuration file for Factorio isolated profiles
 
 [path]
-read-data="{}"
-write-data="{}"
+read-data={}
+write-data={}
 
 [general]
 locale=auto
