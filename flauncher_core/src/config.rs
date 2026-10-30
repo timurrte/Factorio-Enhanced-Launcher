@@ -64,8 +64,8 @@ pub fn find_factorio_installation<P: AsRef<Path>>(install_root: P) -> Result<Fac
 
     #[cfg(target_os = "macos")]
     let (bin_rel, data_rel) = (
-        PathBuf::from("factorio.app/Contents/MacOS/factorio"),
-        PathBuf::from("factorio.app/Contents/data"),
+        PathBuf::from("Contents/MacOS/factorio"),
+        PathBuf::from("Contents/data"),
     );
 
     #[cfg(target_os = "windows")]

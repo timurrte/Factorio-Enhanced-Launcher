@@ -42,7 +42,12 @@ fn App() -> Element {
 
                     button {
                         onclick: move |_| {
-                            if let Some(folder_path) = rfd::FileDialog::new().pick_folder() {
+                            let dialog = rfd::FileDialog::new();
+                            #[cfg(target_os = "macos")]
+                            let selected_path = dialog.add_filter("Application", &["app"]).pick_file();
+                            #[cfg(not(target_os = "macos"))]
+                            let selected_path = dialog.pick_folder();
+                            if let Some(folder_path) = selected_path {
                                 match find_factorio_installation(&folder_path) {
                                     Ok(cfg) => {
                                         if let Err(e) = save_config(&cfg) {
@@ -53,7 +58,7 @@ fn App() -> Element {
                                     }
                                     Err(e) => {
                                         setup_error.set(format!(
-                                            "Invalid folder ({}). Make sure you select the root Factorio folder!",
+                                            "Invalid path ({}). Make sure you select the Factorio application or root folder!",
                                             e
                                         ))
                                     }
@@ -61,7 +66,13 @@ fn App() -> Element {
                             }
                         },
                         style: "background: #526D82; color: #DDE6ED; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px;",
-                        "Browse for Factorio Folder 📂"
+                        {
+                            if cfg!(target_os = "macos") {
+                                "Browse for Factorio App 📂"
+                            } else {
+                                "Browse for Factorio Folder 📂"
+                            }
+                        }
                     }
 
                     if !setup_error().is_empty() {
