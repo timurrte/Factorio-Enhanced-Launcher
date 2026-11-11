@@ -116,6 +116,7 @@ fn App() -> Element {
     let mut update_stage = use_signal(|| UpdateStage::Idle);
     let mut is_updating = use_signal(|| false);
     let mut show_credentials_panel = use_signal(|| false);
+    let mut is_autoupdate_folded = use_signal(|| false);
 
     let mut refresh_profiles = move || {
         profiles.set(get_profiles());
@@ -304,29 +305,58 @@ fn App() -> Element {
                 if active_tab() == ActiveTab::Launcher {
                     // AUTOUPDATE CARD
                     div { style: "background: #1b263b; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #526D82;",
-                            div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;",
+                        div {
+                            style: if is_autoupdate_folded() {
+                                "display: flex; justify-content: space-between; align-items: center;"
+                            } else {
+                                "display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;"
+                            },
+                            div {
+                                style: "cursor: pointer; display: flex; align-items: center; gap: 10px;",
+                                onclick: move |_| is_autoupdate_folded.set(!is_autoupdate_folded()),
                                 div {
-                                    h2 { style: "margin: 0; font-size: 17px; color: #DDE6ED;", "🚀 Factorio Game Autoupdate" }
-                                    span { style: "font-size: 12px; color: #9DB2BF;", "Official standalone updates direct from factorio.com" }
+                                    h2 { style: "margin: 0; font-size: 17px; color: #DDE6ED;", "Autoupdate" }
+                                    span { style: "font-size: 12px; color: #9DB2BF;", "Update the game to new version from factorio.com" }
                                 }
-                                button {
-                                    disabled: is_checking_releases() || is_updating(),
-                                    onclick: move |_| {
-                                        is_checking_releases.set(true);
-                                        release_check_error.set(String::new());
-                                        spawn(async move {
-                                            match fetch_latest_releases().await {
-                                                Ok(releases) => latest_releases.set(Some(releases)),
-                                                Err(e) => release_check_error.set(e),
-                                            }
-                                            is_checking_releases.set(false);
-                                        });
-                                    },
-                                    style: "background: #27374D; color: #DDE6ED; border: 1px solid #526D82; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;",
-                                    if is_checking_releases() { "Checking... ⏳" } else { "Check Updates 🔄" }
+                                if has_update {
+                                    span {
+                                        style: "background: #27ae60; color: #ffffff; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold;",
+                                        "Update Available!"
+                                    }
                                 }
                             }
+                            div { style: "display: flex; gap: 8px; align-items: center;",
+                                if !is_autoupdate_folded() {
+                                    button {
+                                        disabled: is_checking_releases() || is_updating(),
+                                        onclick: move |_| {
+                                            is_checking_releases.set(true);
+                                            release_check_error.set(String::new());
+                                            spawn(async move {
+                                                match fetch_latest_releases().await {
+                                                    Ok(releases) => latest_releases.set(Some(releases)),
+                                                    Err(e) => release_check_error.set(e),
+                                                }
+                                                is_checking_releases.set(false);
+                                            });
+                                        },
+                                        style: "background: #27374D; color: #DDE6ED; border: 1px solid #526D82; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;",
+                                        if is_checking_releases() { "Checking... ⏳" } else { "Check Updates 🔄" }
+                                    }
+                                }
+                                button {
+                                    onclick: move |_| is_autoupdate_folded.set(!is_autoupdate_folded()),
+                                    style: "background: #27374D; color: #DDE6ED; border: 1px solid #526D82; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;",
+                                    if is_autoupdate_folded() {
+                                        "Expand ▼"
+                                    } else {
+                                        "Fold ▲"
+                                    }
+                                }
+                            }
+                        }
 
+                        if !is_autoupdate_folded() {
                             // Release Info Grid
                             div { style: "display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px;",
                                 div { style: "background: #27374D; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #526D82;",
@@ -648,7 +678,47 @@ fn App() -> Element {
                             }
                         }
 
-                        // PROFILES CARD
+                        if is_autoupdate_folded() && is_updating() {
+                            div { style: "margin-top: 15px;",
+                                div { style: "background: #27374D; border: 1px solid #526D82; border-radius: 6px; padding: 12px;",
+                                    match update_stage() {
+                                        UpdateStage::Checking => rsx! {
+                                            div { style: "font-size: 13px; color: #DDE6ED;", "Connecting to Factorio servers..." }
+                                        },
+                                        UpdateStage::Downloading(prog) => {
+                                            let pct = prog.percentage;
+                                            rsx! {
+                                                div {
+                                                    div { style: "display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;",
+                                                        span { "Downloading update..." }
+                                                        span { style: "font-weight: bold; color: #2ecc71;", "{pct:.1}%" }
+                                                    }
+                                                    div { style: "width: 100%; height: 8px; background: #1b263b; border-radius: 4px; overflow: hidden; border: 1px solid #526D82;",
+                                                        div { style: "width: {pct:.1}%; height: 100%; background: #2ecc71; transition: width 0.2s;" }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        UpdateStage::Extracting(msg) => rsx! {
+                                            div { style: "display: flex; align-items: center; gap: 8px; font-size: 13px; color: #f39c12;",
+                                                span { "📦" }
+                                                span { "{msg}" }
+                                            }
+                                        },
+                                        UpdateStage::Installing => rsx! {
+                                            div { style: "display: flex; align-items: center; gap: 8px; font-size: 13px; color: #3498db;",
+                                                span { "⚙️" }
+                                                span { "Overwriting installation..." }
+                                            }
+                                        },
+                                        _ => rsx! { div {} },
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // PROFILES CARD
                         div { style: "background: #1b263b; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #526D82;",
                             h2 { style: "margin-top: 0; font-size: 17px; color: #DDE6ED; margin-bottom: 12px;", "Manage Factorio Profiles" }
 
@@ -947,7 +1017,6 @@ fn App() -> Element {
                             }
                         }
                     }
-                }
 
                 // ========================================================
                 // VIEW 2: CONFIGURATION SUBMENU
@@ -1368,3 +1437,4 @@ fn App() -> Element {
                 }
             }
         }
+    }
